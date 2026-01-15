@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <style>
+    body { width: 350px; font-family: "Helvetica Neue", Arial, sans-serif; padding: 15px; background-color: #f8f9fa; color: #333; }
+    
+    /* ヘッダー */
+    header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #e0e0e0; padding-bottom: 10px; margin-bottom: 15px; }
+    h2 { font-size: 16px; margin: 0; color: #4285f4; }
+    .header-btns { display: flex; gap: 5px; }
+    .btn-icon { background: none; border: none; cursor: pointer; font-size: 16px; color: #666; transition: color 0.2s; padding: 5px; border-radius: 4px; }
+    .btn-icon:hover { background-color: #e8f0fe; color: #1a73e8; }
+
+    /* メインボタン */
+    .btn { display: block; width: 100%; padding: 10px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; margin-bottom: 10px; transition: all 0.2s; font-size: 13px; text-align: center; }
+    .btn-download { background-color: #1a73e8; color: white; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+    .btn-download:hover { background-color: #1557b0; transform: translateY(-1px); }
+
+    /* ステータス */
+    #status { font-size: 11px; text-align: center; color: #666; min-height: 1.2em; margin-bottom: 10px; }
+
+    /* --- Gemアイコン設定エリア --- */
+    #gem-settings { background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); margin-bottom: 15px; display: none; }
+    .label { font-size: 12px; font-weight: bold; margin-bottom: 8px; display: block; color: #555; }
+    
+    .drop-zone {
+      border: 2px dashed #ccc; border-radius: 8px; padding: 20px; text-align: center;
+      color: #999; cursor: pointer; transition: all 0.2s; position: relative; background: #fafafa;
+    }
+    .drop-zone:hover, .drop-zone.dragover { border-color: #4285f4; background-color: #e8f0fe; color: #4285f4; }
+    .drop-zone p { margin: 0; font-size: 12px; pointer-events: none; }
+    #iconInput { display: none; }
+    
+    #preview-container { margin-top: 10px; text-align: center; display: none; }
+    #icon-preview { width: 60px; height: 60px; border-radius: 50%; object-fit: cover; border: 2px solid #fff; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+    
+    .action-buttons { gap: 5px; margin-top: 10px; display: none; }
+    .btn-apply { background: #34a853; color: white; flex: 1; margin: 0; padding: 8px; border:none; border-radius:4px; cursor:pointer;}
+    .btn-reset { background: #f44336; color: white; width: 30%; margin: 0; font-size: 11px; padding: 8px; border:none; border-radius:4px; cursor:pointer;}
+
+    /* --- 履歴リスト & 検索 --- */
+    .list-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; }
+    .list-title { font-size: 12px; font-weight: bold; color: #555; }
+    
+    /* 検索ボックス */
+    #searchBox {
+      width: 100%; padding: 8px 10px; box-sizing: border-box; border: 1px solid #ddd;
+      border-radius: 20px; font-size: 12px; margin-bottom: 10px; outline: none; transition: border 0.2s;
+    }
+    #searchBox:focus { border-color: #4285f4; }
+
+    .link-list { max-height: 300px; overflow-y: auto; list-style: none; padding: 0; margin: 0; border-top: 1px solid #eee; }
+    .link-list li { 
+      padding: 8px 5px; border-bottom: 1px solid #f0f0f0; display: flex; align-items: center; gap: 5px;
+      transition: background 0.1s;
+    }
+    .link-list li:hover { background-color: #f8f9fa; }
+
+    /* リストアイテム内の要素配置 */
+    .link-content { flex: 1; overflow: hidden; display: flex; flex-direction: column; }
+    .link-title { color: #333; text-decoration: none; font-size: 12px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; }
+    .link-title:hover { color: #1a73e8; }
+    .link-date { font-size: 10px; color: #999; }
+    
+    /* 操作ボタン (編集・削除) */
+    .item-actions { display: flex; gap: 2px; opacity: 0.6; }
+    .link-list li:hover .item-actions { opacity: 1; }
+    .btn-action-small {
+      background: none; border: none; cursor: pointer; font-size: 14px; padding: 4px; border-radius: 4px; color: #777;
+    }
+    .btn-action-small:hover { background-color: #ddd; color: #333; }
+    .btn-delete:hover { background-color: #ffebee; color: #d32f2f; }
+
+    .empty-msg { text-align: center; font-size: 11px; color: #999; padding: 20px; }
+
+    /* スクロールバー */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-thumb { background: #ccc; border-radius: 3px; }
+  </style>
+</head>
+<body>
+  <header>
+    <h2>Gemini Tools 💎</h2>
+    <div class="header-btns">
+      <button id="exportBtn" class="btn-icon" title="JSONでバックアップ">💾</button>
+    </div>
+  </header>
+
+  <button id="downloadBtn" class="btn btn-download">📝 Markdownで保存</button>
+  <div id="status">準備中...</div>
+
+  <div id="gem-settings">
+    <span class="label">Gemアイコン設定: <span id="gem-name" style="color:#1a73e8"></span></span>
+    
+    <div class="drop-zone" id="dropZone">
+      <p>画像をドロップ<br>またはクリック</p>
+      <input type="file" id="iconInput" accept="image/*">
+    </div>
+
+    <div id="preview-container">
+      <img id="icon-preview" alt="Preview">
+    </div>
+
+    <div class="action-buttons" id="actionButtons" style="display:flex;">
+      <button id="saveIconBtn" class="btn-apply">適用</button>
+      <button id="resetIconBtn" class="btn-reset">削除</button>
+    </div>
+  </div>
+
+  <div class="list-header">
+    <span class="list-title">履歴一覧</span>
+  </div>
+  <input type="text" id="searchBox" placeholder="タイトル検索...">
+  
+  <ul class="link-list" id="chatList"></ul>
+
+  <script src="popup.js"></script>
+</body>
+</html>
